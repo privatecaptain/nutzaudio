@@ -3,14 +3,7 @@ import slate
 from Tkinter import *
 from tkFileDialog import *
 
-root = Tk()
-root.wm_title("PDF to CSV")
-
-w = Label(root, text="Please choose a .pdf file to convert.") 
-fileName = askopenfilename(parent=root)
-
-w.pack()
-root.mainloop()
+fileName = raw_input('Enter file name : ')
 
 f = open(fileName,'rb')
 
