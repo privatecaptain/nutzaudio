@@ -1,6 +1,7 @@
 import time
 import slate
 import re
+from unidecode import unidecode
 
 while True:
 	try:
@@ -55,15 +56,27 @@ def get_info(page):
 	if address != '':	
 		info.update(parse_address(address))
 	for i in info:
-		if type(info[i]) == str:
+		if type(info[i]) == unicode:
 			info[i] = info[i].replace('\n',' ')
+			info[i] = unidecode(info[i])
+	info = remove_junk(info)
 	return info
 
+def remove_junk(info):
+	for i in info:
+		a = info[i]
+		b = u''
+		if type(a) == unicode or type(a) == str:
+			for j in a:
+				if j.isalnum() or j == ' ':
+					b += j
+			info[i] = b
+	return info
 
 def remove_ship(page):
 	page = page.replace('Shipped Via','')
 	page = page.replace('STANDARD','')
-	return page
+	return page.decode('utf-8')
 
 
 def parse_address(address):
@@ -74,8 +87,8 @@ def parse_address(address):
 	city = address[2]
 	street = ' '.join(address[3:-1])
 	return {
-		'street' : street.decode(errors='ignore'),
-		'city': city.decode(errors='ignore'),
+		'street' : street,
+		'city': city,
 		'country_code' : country_code,
 		'zip_code' :zip_code
 	}
@@ -85,7 +98,7 @@ def export(info):
 	for i in info:
 		line = '"IG1","1",'
 		line += '"' + i['ref_num'] + '",'
-		line += '"' + i['name'].decode(errors='ignore') + '",'
+		line += '"' + i['name'] + '",'
 		line += '"' + i['street'] + '",'
 		line += '"' + i['city'] + '",'
 		line += '"' + i['country_code'] + '",'
