@@ -165,15 +165,32 @@ def get_color(page):
 	trans = {'Rood' : 'Red',
 			 'Groen' : 'Green',
 			 'Oranje' : 'Orange',
-			 'Geel' : 'Yellow'
+			 'Geel' : 'Yellow',
+			 'Rouge' : 'Red',
+			 'Vert' : 'Green',
+			 'Jaune' : 'Yellow',
+			 'Fraise' : 'Strawberry',
+			 'Pomme' : 'Apple',
+			 'Orange' : 'Orange',
+			 'Banana' : 'Banana'
+
+
 			}
 	colors = re.findall('- [a-zA-Z]+',page)
 	if colors:
 		color = colors[0]
-		color = color.replace('-','')
-		color = color.replace(' ','')
-
-		return trans[color]
+		for i in colors:		
+			i = i.replace('-','')
+			i = i.replace(' ','')
+			
+			if i in trans.keys():
+				color = i
+				break
+		if color in trans.keys():
+			return trans[color]
+		else:
+			print color
+			return color
 	return ''
 
 
