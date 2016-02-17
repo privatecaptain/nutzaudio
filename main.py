@@ -64,7 +64,6 @@ def get_info(page,lang):
 		ref_num = get_from_header(page,'Ordernummer')
 		
 		if 'Ordernummer' in address:
-			print 'In',ref_num
 			address = get_from_header(page,'STANDARD')
 
 	else:	
