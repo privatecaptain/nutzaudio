@@ -7,6 +7,7 @@ while True:
 	try:
 		fileName = raw_input('Enter file name : ')
 		f = open(fileName,'rb')
+		lang = raw_input('Enter "en" for English or "nl" for Dutch : ')
 		print 'Loading file...'
 		break
 	except IOError,e:
@@ -20,38 +21,78 @@ doc = slate.PDF(f)
 
 
 print time.time() - t1, 'secs..'
+def get_points(lang,page):
+	points = {}
+	if lang == 'nl':
+		points['ship_to'] = 'Verzenden\nnaar'
+		points['bill_to'] = 'Factureren aan'
+		points['order_id'] = 'Ordernummer'
+		points['order_date'] = 'Besteldatum'
+		points['item_number'] = 'Productnummer'
+		points['item_desc']  = 'Productomschrijving'
+		points['vevo'] = 'Vervoerder'
+		points['standard'] = 'STANDARD'
 
-def get_info(page):
+	elif lang == 'en':
+		points['ship_to'] = 'Ship To'
+		points['bill_to'] = 'Bill To'
+		points['order_id'] = 'Order ID'
+		points['order_date'] = 'Order Date'
+		points['item_number'] = 'Item Number'
+		points['item_desc']  = 'Item Description'
+
+	for i in points:
+		points[i] = page.find(points[i])
+
+	return points
+
+def get_info(page,lang):
 	info = {}
 	items = get_items(page)
+	color = get_color(page)
 	weight = str(items*100)
-	page = remove_ship(page)
-	ship_to = page.find('Ship To')
-	bill_to = page.find('Bill To')
-	order_id = page.find('Order ID')
-	order_date = page.find('Order Date')
-	item_number = page.find('Item Number')
-	item_desc = page.find('Item Description')
-	if ship_to < bill_to:
-		name = page[bill_to:item_desc]
-		address = page[ship_to:bill_to]
-	else:
-		name = page[bill_to:ship_to]
-		address = page[ship_to:item_desc]
-	ref_num = page[order_id:item_number]
-	date = page[order_date:order_id]
+	page = remove_ship(page,lang)
+	points = get_points(lang,page)
+
+	for key,val in points.items():
+		exec(key + '=val')
+
+	if lang == 'nl':
+		name = get_from_header(page,'Factureren aan')
+		date = get_from_header(page,'Besteldatum')
+		address = get_from_header(page,'Verzenden\nnaar')
+		ref_num = get_from_header(page,'Ordernummer')
+		
+		if 'Ordernummer' in address:
+			print 'In'
+			address = get_from_header(page,'STANDARD')
+
+	else:	
+		if ship_to < bill_to:
+			name = page[bill_to:item_desc]
+			address = page[ship_to:bill_to]
+		else:
+			name = page[bill_to:ship_to]
+			address = page[ship_to:item_desc]
+		date = page[order_date:order_id]
+		ref_num = page[order_id:item_number]
 	# Clean strings
-	name = name.replace('Bill To','')
-	address = address.replace('Ship To','')
+	if lang == 'en':
+		name = name.replace('Bill To','')
+		address = address.replace('Ship To','')
+		ref_num = ref_num.replace('Order ID','')
+		date = date.replace('Order Date','')
+
 	address = address.strip()
-	ref_num = ref_num.replace('Order ID','')
-	date = date.replace('Order Date','')
+	# print address
+
 	info = {
 		'name' : name.strip(),
 		'ref_num' : ref_num.strip(),
 		'date' : date.strip(),
 		'items' : items,
-		'weight' : weight
+		'weight' : weight,
+		'color' : color
 	}
 	if address != '':	
 		info.update(parse_address(address))
@@ -73,9 +114,11 @@ def remove_junk(info):
 			info[i] = b
 	return info
 
-def remove_ship(page):
-	page = page.replace('Shipped Via','')
-	page = page.replace('STANDARD','')
+def remove_ship(page,lang):
+	if lang == 'en':
+		page = page.replace('Shipped Via','')
+		page = page.replace('STANDARD','')
+	
 	return page.decode('utf-8')
 
 
@@ -96,28 +139,47 @@ def parse_address(address):
 def export(info):
 
 	for i in info:
-		line = '"IG1","1",'
-		line += '"' + i['ref_num'] + '",'
-		line += '"' + i['name'] + '",'
-		line += '"' + i['street'] + '",'
-		line += '"' + i['city'] + '",'
-		line += '"' + i['country_code'] + '",'
-		line += '"' + i['zip_code'] + '",'
-		line += '"' + str(i['items']) + '",'
-		line += '"' + i['weight'] + '"\n'
+		for j in range(i['items']):
+			line = '"IG1","1",'
+			line += '"' + i['ref_num'] + '",'
+			line += '"' + i['name'] + '",'
+			line += '"' + i['street'] + '",'
+			line += '"' + i['city'] + '",'
+			line += '"' + i['country_code'] + '",'
+			line += '"' + i['zip_code'] + '",'
+			line += '"1",'
+			line += '"100",'
+			line += '"' + i['date'] + '"\n'
 
-		w.write(line)
+			w.write(line)
 
 def get_items(page):
-	ids = re.findall('[\d]{9}',page)
+	ids = re.findall(r'\b[\d]{9}\b',page)
 	return len(ids) - 1
 
+def get_color(page):
+	colors = re.findall('- [a-zA-Z]+',page)
+	if colors:
+		color = colors[0]
+		color = color.replace('-','')
+		color = color.replace(' ','')
 
+		return color
+	return ''
+
+
+def get_from_header(page,header):
+	start = page.find(header)
+	page = page[start:]
+	start = page.find('\n\n') + 2
+	page = page[start:]
+	end = page.find('\n\n')
+	return page[:end]
 
 
 info = []
 for idx,e in enumerate(doc):
-	temp = get_info(e)
+	temp = get_info(e,lang)
 	temp['id'] = idx
 	if temp['name'] != '':
 		info.append(temp)
