@@ -64,7 +64,7 @@ def get_info(page,lang):
 		ref_num = get_from_header(page,'Ordernummer')
 		
 		if 'Ordernummer' in address:
-			print 'In'
+			print 'In',ref_num
 			address = get_from_header(page,'STANDARD')
 
 	else:	
@@ -123,12 +123,18 @@ def remove_ship(page,lang):
 
 
 def parse_address(address):
-	address = address.split('\n')
-	address = address[::-1]
-	zip_code = address[0]
-	country_code = address[1]
-	city = address[2]
-	street = ' '.join(address[3:-1])
+	try:
+		address = address.split('\n')
+		address = address[::-1]
+		zip_code = address[0]
+		country_code = address[1]
+		city = address[2]
+		street = ' '.join(address[3:-1])
+	except:
+		street = ''
+		city = ''
+		country_code = ''
+		zip_code = ''
 	return {
 		'street' : street,
 		'city': city,
@@ -141,7 +147,7 @@ def export(info):
 	for i in info:
 		for j in range(i['items']):
 			line = '"IG1","1",'
-			line += '"' + i['ref_num'] + '",'
+			line += '"' + i['color'] + '",'
 			line += '"' + i['name'] + '",'
 			line += '"' + i['street'] + '",'
 			line += '"' + i['city'] + '",'
@@ -150,7 +156,6 @@ def export(info):
 			line += '"1",'
 			line += '"100",'
 			line += '"' + i['date'] + '"\n'
-
 			w.write(line)
 
 def get_items(page):
@@ -158,13 +163,18 @@ def get_items(page):
 	return len(ids) - 1
 
 def get_color(page):
+	trans = {'Rood' : 'Red',
+			 'Groen' : 'Green',
+			 'Oranje' : 'Orange',
+			 'Geel' : 'Yellow'
+			}
 	colors = re.findall('- [a-zA-Z]+',page)
 	if colors:
 		color = colors[0]
 		color = color.replace('-','')
 		color = color.replace(' ','')
 
-		return color
+		return trans[color]
 	return ''
 
 
